@@ -295,18 +295,18 @@ const DEF={
   compCesta:95000, compAlim:185000, compBeb:62000, despGerais:118000,
   aluguel:62000, aluguelPJ:1, folha:330000, encargos:35, compSimples:140000,
   estoque:185000,
-  cbsRef:8.80, ibsRef:17.70, reducao:40, pisCofins:3.65, icmsEf:3.20, irpjCsll:2.28, comp26:1,
+  cbsRef:8.80, ibsRef:17.70, reducao:40, pisCofins:3.65, icmsEf:4.00, irpjCsll:2.28, comp26:1,
   pPreco:92, pCmv:27, pCesta:35
 };
 const CAMPOS=Object.keys(DEF);
 let S={...DEF};
-try{ const g=localStorage.getItem('abs-fin'); if(g){ S={...DEF,...JSON.parse(g)}; } }catch(e){}
+try{ const g=localStorage.getItem('abs-fin-v2'); if(g){ S={...DEF,...JSON.parse(g)}; } }catch(e){}
 CAMPOS.forEach(k=>{
   const el=document.getElementById(k); if(!el) return;
   el.value=S[k];
   el.addEventListener('input',()=>{
     const v=parseFloat(el.value); S[k]=isNaN(v)?0:v;
-    try{ localStorage.setItem('abs-fin',JSON.stringify(S)); }catch(e){}
+    try{ localStorage.setItem('abs-fin-v2',JSON.stringify(S)); }catch(e){}
     render();
   });
 });
@@ -387,7 +387,9 @@ function render(){
     ['Carga sobre consumo hoje',PCT(h.efetiva),BRL(h.consumo)+' por mês',''],
     ['Carga em 2033',PCT(c33.efetiva),BRL(c33.consumo)+' por mês',''],
     ['Variação mensal',(delta>=0?'+':'−')+BRL(Math.abs(delta)),delta>=0?'a mais em imposto, em 2033':'a menos em imposto, em 2033',delta>0?'ruim':'bom'],
-    ['Crédito de entrada em 2033',BRL(c33.credito),'hoje a casa não aproveita nada disso','bom']
+    ['Crédito de entrada em 2033',BRL(c33.credito),'hoje a casa não aproveita nada disso','bom'],
+    ['Carga total hoje',PCT(h.efetiva+S.irpjCsll),'consumo + IRPJ e CSLL',''],
+    ['Carga total em 2033',PCT(c33.efetiva+S.irpjCsll),'consumo + IRPJ e CSLL','']
   ];
   document.getElementById('kpis').innerHTML=kpis.map(([r,v,p,c])=>
     `<div class="kpi"><div class="rot">${r}</div><div class="val ${c||''}">${v}</div><div class="pe">${p}</div></div>`).join('');
