@@ -118,6 +118,15 @@ tbody tr.dest td{font-weight:600}
   <h2>Dados do mês</h2>
   <p class="desc">Valores mensais, em reais. Tudo que está abaixo alimenta as outras abas em tempo real. Os números que já vêm preenchidos são <b>exemplo ilustrativo</b> — substitua pelos reais antes de apresentar.</p>
 
+  <div class="grid g3" style="margin-bottom:18px">
+   <div><label>Competência (AAAA-MM)</label><input type="text" id="competencia" placeholder="2026-09"></div>
+   <div style="display:flex;align-items:flex-end;gap:8px">
+     <button class="btn" id="btnCarregar">Carregar do banco</button>
+     <button class="btn sec" id="btnSalvar">Salvar agora</button>
+   </div>
+   <div style="display:flex;align-items:flex-end"><span id="sbStatus" style="font-size:12.5px;color:var(--txt2)"></span></div>
+  </div>
+
   <h3>Receita</h3>
   <div class="grid g4">
    <div><label>Salão (alimentação)</label><input type="number" id="recSalao"></div>
@@ -243,6 +252,11 @@ tbody tr.dest td{font-weight:600}
   <p class="desc">Geradas a partir dos números preenchidos na aba Dados. Mudou o dado, muda a recomendação.</p>
   <div id="sugestoes"></div>
  </div>
+ <div class="card">
+  <h2>Análises do agente diário</h2>
+  <p class="desc">Gravadas automaticamente pela tarefa agendada, uma vez por dia, a partir dos dados salvos no banco.</p>
+  <div id="sugAgente"></div>
+ </div>
 </section>
 
 <!-- ============ PLANO ============ -->
@@ -307,9 +321,85 @@ CAMPOS.forEach(k=>{
   el.addEventListener('input',()=>{
     const v=parseFloat(el.value); S[k]=isNaN(v)?0:v;
     try{ localStorage.setItem('abs-fin-v2',JSON.stringify(S)); }catch(e){}
-    render();
+    render(); agendarSalvar();
   });
 });
+
+/* ---------- banco de dados (Supabase) ---------- */
+const SB_URL='https://kfgcqshhltemsochafid.supabase.co';
+const SB_KEY='sb_publishable_-t8ynneFzBs_Xw3oEWenzA_APQqzOa-';
+const SB_H={apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'};
+const elComp=document.getElementById('competencia');
+const elStatus=document.getElementById('sbStatus');
+let COMP=(new Date()).toISOString().slice(0,7);
+try{ const c=localStorage.getItem('abs-fin-comp'); if(c) COMP=c; }catch(e){}
+if(elComp) elComp.value=COMP;
+function status(t,cor){ if(elStatus){ elStatus.textContent=t; elStatus.style.color=cor||'var(--txt2)'; } }
+
+async function sbCarregar(comp){
+  const r=await fetch(SB_URL+'/rest/v1/fin_mes?competencia=eq.'+encodeURIComponent(comp)+'&select=dados',{headers:SB_H});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  const j=await r.json();
+  return j.length?j[0].dados:null;
+}
+async function sbSalvar(comp,dados){
+  const r=await fetch(SB_URL+'/rest/v1/fin_mes?on_conflict=competencia',{method:'POST',
+    headers:Object.assign({},SB_H,{Prefer:'resolution=merge-duplicates'}),
+    body:JSON.stringify({competencia:comp,dados:dados,atualizado_em:new Date().toISOString()})});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+}
+async function sbSugestoes(){
+  const r=await fetch(SB_URL+'/rest/v1/fin_sugestoes?select=*&order=criado_em.desc&limit=12',{headers:SB_H});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  return await r.json();
+}
+
+let tmr=null;
+function agendarSalvar(){
+  clearTimeout(tmr);
+  status('alterado — salvando…');
+  tmr=setTimeout(async()=>{
+    try{ await sbSalvar(COMP,S); status('salvo no banco em '+new Date().toLocaleTimeString('pt-BR'),'var(--verde)'); }
+    catch(e){ status('não consegui salvar no banco ('+e.message+') — os dados seguem neste navegador','var(--vermelho)'); }
+  },1500);
+}
+
+async function carregarComp(comp,silencioso){
+  try{
+    const d=await sbCarregar(comp);
+    if(d){
+      S=Object.assign({},DEF,d);
+      CAMPOS.forEach(k=>{ const el=document.getElementById(k); if(el) el.value=S[k]; });
+      render(); status('carregado do banco: '+comp,'var(--verde)');
+    } else if(!silencioso){ status('não há dados salvos para '+comp+' — preencha e salve'); }
+    else { status('sem registro para '+comp+' ainda'); }
+  }catch(e){ status('banco indisponível ('+e.message+') — usando os dados deste navegador','var(--vermelho)'); }
+}
+
+async function renderAgente(){
+  const alvo=document.getElementById('sugAgente'); if(!alvo) return;
+  try{
+    const lista=await sbSugestoes();
+    if(!lista.length){ alvo.innerHTML='<p class="desc" style="margin:0">Nenhuma análise gravada ainda. Assim que a tarefa diária estiver ligada, elas aparecem aqui.</p>'; return; }
+    alvo.innerHTML=lista.map(x=>{
+      const n=(x.prioridade==='alta'||x.prioridade==='media')?x.prioridade:'info';
+      const d=new Date(x.criado_em).toLocaleDateString('pt-BR');
+      return '<div class="sug '+n+'"><div class="tag">'+(n==='alta'?'Prioridade alta':n==='media'?'Atenção':'Observação')+' · '+d+'</div>'+
+             '<h4>'+String(x.titulo).replace(/</g,'&lt;')+'</h4><p>'+String(x.texto).replace(/</g,'&lt;')+'</p></div>';
+    }).join('');
+  }catch(e){ alvo.innerHTML='<p class="desc" style="margin:0">Não consegui ler as análises do banco agora.</p>'; }
+}
+
+if(elComp) elComp.addEventListener('change',()=>{
+  COMP=(elComp.value||'').trim()||COMP;
+  try{ localStorage.setItem('abs-fin-comp',COMP); }catch(e){}
+  carregarComp(COMP,true);
+});
+const bC=document.getElementById('btnCarregar'); if(bC) bC.onclick=()=>carregarComp(COMP);
+const bS=document.getElementById('btnSalvar'); if(bS) bS.onclick=async()=>{
+  try{ await sbSalvar(COMP,S); status('salvo no banco em '+new Date().toLocaleTimeString('pt-BR'),'var(--verde)'); }
+  catch(e){ status('não consegui salvar ('+e.message+')','var(--vermelho)'); }
+};
 
 /* ---------- utilitários ---------- */
 const BRL=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
@@ -574,6 +664,8 @@ function planos(b){
 }
 
 render();
+carregarComp(COMP,true);
+renderAgente();
 </script>
 </body>
 </html>
