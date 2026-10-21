@@ -92,10 +92,41 @@ tbody tr.dest td{font-weight:600}
 .btn{background:var(--azul);color:#fff;border:0;border-radius:9px;padding:10px 16px;font-size:14px;font-weight:550;cursor:pointer;font-family:inherit}
 .btn.sec{background:transparent;color:var(--azul);border:1px solid var(--linha)}
 .pill{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--azulclaro);color:var(--azul);margin-left:7px;vertical-align:middle}
+@media print{
+  #portao,nav,.tema,.naoimprime{display:none!important}
+  header{background:none;color:var(--txt);padding:0}
+  .marca,.sub{color:var(--txt2)}
+  section{display:block!important;page-break-before:always;padding-top:12px}
+  section:first-of-type{page-break-before:avoid}
+  .card{box-shadow:none;break-inside:avoid}
+  body{background:#fff}
+}
+.acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.mini{font-size:12px;color:var(--txt2);margin-top:10px}
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--azulclaro);color:var(--azul)}
+#portao{position:fixed;inset:0;background:linear-gradient(135deg,#14395c 0%,#0e2740 100%);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+#portao .box{background:var(--card);border-radius:16px;padding:30px 28px;max-width:380px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+#portao .mc{font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--txt2);margin:0 0 6px}
+#portao h2{margin:0 0 6px;font-size:20px;font-weight:600}
+#portao p{margin:0 0 18px;font-size:13.5px;color:var(--txt2)}
+#portao input{text-align:center;letter-spacing:.08em;font-size:16px;text-transform:uppercase}
+#portao button{width:100%;margin-top:12px}
+#portaoMsg{font-size:13px;margin-top:11px;min-height:18px;text-align:center}
+body.travado{overflow:hidden}
 @media(max-width:600px){h1{font-size:21px}.wrap{padding:0 14px 60px}.kpi .val{font-size:20px}.vlr{width:92px;font-size:12px}}
 </style>
 </head>
-<body>
+<body class="travado">
+<div id="portao">
+ <div class="box">
+  <p class="mc">a bela Sintra · Controladoria</p>
+  <h2>Painel Financeiro</h2>
+  <p>Digite o código de acesso para abrir o painel.</p>
+  <input type="text" id="codigo" placeholder="SEU-CODIGO" autocomplete="off">
+  <button class="btn" id="btnEntrar">Entrar</button>
+  <div id="portaoMsg"></div>
+ </div>
+</div>
 <header>
  <div class="wrap">
   <div class="hd">
@@ -125,6 +156,11 @@ tbody tr.dest td{font-weight:600}
      <button class="btn sec" id="btnSalvar">Salvar agora</button>
    </div>
    <div style="display:flex;align-items:flex-end"><span id="sbStatus" style="font-size:12.5px;color:var(--txt2)"></span></div>
+  </div>
+  <div class="acoes naoimprime" style="margin-bottom:18px">
+   <button class="btn sec" id="btnImprimir">Imprimir / salvar em PDF</button>
+   <button class="btn sec" id="btnCsv">Exportar histórico em CSV</button>
+   <button class="btn sec" id="btnLimpar">Restaurar valores de exemplo</button>
   </div>
 
   <h3>Receita</h3>
@@ -199,12 +235,32 @@ tbody tr.dest td{font-weight:600}
   <div class="grid g4" id="kpis"></div>
  </div>
  <div class="card">
+  <h2>Ponto de equilíbrio</h2>
+  <p class="desc">Faturamento mínimo para o mês fechar no zero a zero, considerando os custos fixos atuais.</p>
+  <div class="grid g3" id="pe"></div>
+ </div>
+ <div class="card">
   <h2>Para onde vai cada real que entra</h2>
   <div id="cascata"></div>
  </div>
  <div class="card">
   <h2>DRE gerencial</h2>
   <div class="tw"><table id="dre"></table></div>
+ </div>
+</section>
+
+<!-- ============ HISTORICO ============ -->
+<section id="s-historico">
+ <div class="card">
+  <h2>Evolução mês a mês</h2>
+  <p class="desc">Todas as competências já salvas no banco, lado a lado. É aqui que a tendência aparece — um mês isolado não diz se a casa está melhorando ou piorando.</p>
+  <div class="tw"><table id="tabHist"></table></div>
+  <div id="grafHist" style="margin-top:22px"></div>
+ </div>
+ <div class="card">
+  <h2>Variação do último mês</h2>
+  <div class="grid g4" id="varKpis"></div>
+  <p class="mini">Comparação entre a competência mais recente e a anterior, quando há pelo menos dois meses salvos.</p>
  </div>
 </section>
 
@@ -278,7 +334,44 @@ tbody tr.dest td{font-weight:600}
 </div>
 
 <script>
-const ABAS=[["dados","Dados"],["visao","Visão geral"],["reforma","Reforma 2026-2033"],["preco","Preço & margem"],["sug","Sugestões"],["plano","Plano"]];
+/* ---------- acesso ---------- */
+const SBU='https://kfgcqshhltemsochafid.supabase.co';
+const SBK='sb_publishable_-t8ynneFzBs_Xw3oEWenzA_APQqzOa-';
+const SBH={apikey:SBK,Authorization:'Bearer '+SBK,'Content-Type':'application/json'};
+let USUARIO=null;
+const pMsg=document.getElementById('portaoMsg');
+const pInp=document.getElementById('codigo');
+
+function abrirPainel(u){
+  USUARIO=u;
+  document.getElementById('portao').style.display='none';
+  document.body.classList.remove('travado');
+  const m=document.querySelector('.marca');
+  if(m&&u&&u.nome) m.textContent='a bela Sintra \u00b7 '+u.nome;
+}
+async function entrar(){
+  const c=(pInp.value||'').trim().toUpperCase();
+  if(!c){ pMsg.textContent='Digite o código.'; pMsg.style.color='var(--vermelho)'; return; }
+  pMsg.textContent='Verificando…'; pMsg.style.color='var(--txt2)';
+  try{
+    const r=await fetch(SBU+'/rest/v1/fin_acesso?codigo=eq.'+encodeURIComponent(c)+'&ativo=eq.true&select=codigo,nome,papel',{headers:SBH});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const j=await r.json();
+    if(!j.length){ pMsg.textContent='Código não encontrado.'; pMsg.style.color='var(--vermelho)'; return; }
+    try{ sessionStorage.setItem('abs-fin-user',JSON.stringify(j[0])); }catch(e){}
+    fetch(SBU+'/rest/v1/fin_acesso?codigo=eq.'+encodeURIComponent(c),{method:'PATCH',headers:SBH,body:JSON.stringify({ultimo_acesso:new Date().toISOString()})}).catch(()=>{});
+    abrirPainel(j[0]);
+  }catch(e){
+    pMsg.textContent='Não consegui verificar agora ('+e.message+').';
+    pMsg.style.color='var(--vermelho)';
+  }
+}
+document.getElementById('btnEntrar').onclick=entrar;
+pInp.addEventListener('keydown',ev=>{ if(ev.key==='Enter') entrar(); });
+try{ const u=sessionStorage.getItem('abs-fin-user'); if(u) abrirPainel(JSON.parse(u)); }catch(e){}
+setTimeout(()=>{ try{ pInp.focus(); }catch(e){} },100);
+
+const ABAS=[["dados","Dados"],["visao","Visão geral"],["historico","Histórico"],["reforma","Reforma 2026-2033"],["preco","Preço & margem"],["sug","Sugestões"],["plano","Plano"]];
 const nav=document.getElementById('nav');
 ABAS.forEach(([id,nome],i)=>{
   const b=document.createElement('button');
@@ -460,6 +553,72 @@ function resultado(cargaConsumo){
           margem:b.receita?lucro/b.receita*100:0};
 }
 
+/* ---------- metricas de um estado qualquer ---------- */
+function metricas(st){
+  const guarda=S; S=Object.assign({},DEF,st);
+  const b=base(), h=hoje(), r=resultado(h.consumo), c33=calcAno(2033);
+  const out={receita:b.receita, cmv:b.cmv, cmvPct:b.receita?b.cmv/b.receita*100:0,
+    folha:b.folhaTotal, folhaPct:b.receita?b.folhaTotal/b.receita*100:0,
+    imposto:h.consumo, cargaTotal:h.efetiva+S.irpjCsll,
+    lucro:r.lucro, margem:r.margem, carga2033:c33.efetiva+S.irpjCsll};
+  S=guarda; return out;
+}
+function pontoEquilibrio(){
+  const b=base();
+  const fixos=b.folhaTotal+S.despGerais+S.aluguel;
+  const margContrib=1-(b.receita?b.cmv/b.receita:0)-((S.pisCofins+S.icmsEf)/100);
+  const pe=margContrib>0?fixos/margContrib:0;
+  return {fixos,margContrib:margContrib*100,pe,folga:b.receita-pe};
+}
+
+let HIST=[];
+async function sbHistorico(){
+  const r=await fetch(SB_URL+'/rest/v1/fin_mes?select=competencia,dados&order=competencia.asc',{headers:SB_H});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  return await r.json();
+}
+function rotuloComp(c){
+  const m=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  const p=String(c).split('-');
+  if(p.length===2&&+p[1]>=1&&+p[1]<=12) return m[+p[1]-1]+'/'+p[0].slice(2);
+  return c;
+}
+async function renderHistorico(){
+  const tab=document.getElementById('tabHist'), gr=document.getElementById('grafHist'), vk=document.getElementById('varKpis');
+  if(!tab) return;
+  let lista=[];
+  try{ lista=await sbHistorico(); }
+  catch(e){ tab.innerHTML='<tbody><tr><td>Não consegui ler o histórico do banco agora.</td></tr></tbody>'; return; }
+  lista=lista.filter(x=>/^\d{4}-\d{2}$/.test(x.competencia));
+  HIST=lista.map(x=>Object.assign({competencia:x.competencia},metricas(x.dados||{})));
+  if(!HIST.length){
+    tab.innerHTML='<tbody><tr><td>Nenhuma competência salva ainda. Preencha a aba Dados e salve.</td></tr></tbody>';
+    if(gr) gr.innerHTML=''; if(vk) vk.innerHTML='';
+    return;
+  }
+  tab.innerHTML='<thead><tr><th>Competência</th><th>Receita</th><th>CMV</th><th>Folha</th><th>Impostos</th><th>Carga total</th><th>Resultado</th><th>Margem</th></tr></thead><tbody>'+
+    HIST.map(x=>'<tr><td>'+rotuloComp(x.competencia)+'</td><td>'+BRL(x.receita)+'</td><td>'+PCT(x.cmvPct)+'</td><td>'+PCT(x.folhaPct)+'</td><td>'+BRL(x.imposto)+'</td><td>'+PCT(x.cargaTotal)+'</td><td class="'+(x.lucro<0?'ruim':'bom')+'">'+BRL(x.lucro)+'</td><td>'+PCT(x.margem)+'</td></tr>').join('')+'</tbody>';
+  const maxR=Math.max.apply(null,HIST.map(x=>x.receita))||1;
+  if(gr) gr.innerHTML=HIST.map(x=>{
+    const pl=Math.max(0,x.lucro)/maxR*100, pc=(x.receita-Math.max(0,x.lucro))/maxR*100;
+    return '<div class="lin"><div style="width:62px;font-size:13px">'+rotuloComp(x.competencia)+'</div>'+
+      '<div class="barra" style="display:flex"><i class="leg" style="width:'+pc+'%"></i><i style="width:'+pl+'%;border-radius:0 5px 5px 0"></i></div>'+
+      '<div class="vlr">'+BRL(x.receita)+'</div></div>';
+  }).join('')+'<p class="desc" style="margin-top:10px"><span style="color:var(--vinho)">■</span> custos e impostos &nbsp;&nbsp; <span style="color:var(--azul2)">■</span> resultado</p>';
+  if(vk){
+    if(HIST.length<2){ vk.innerHTML='<p class="desc" style="margin:0">Salve pelo menos dois meses para a comparação aparecer.</p>'; return; }
+    const a=HIST[HIST.length-2], z=HIST[HIST.length-1];
+    const cmp=[['Receita',z.receita-a.receita,BRL,false],['CMV (p.p.)',z.cmvPct-a.cmvPct,PCT,true],
+      ['Folha (p.p.)',z.folhaPct-a.folhaPct,PCT,true],['Margem (p.p.)',z.margem-a.margem,PCT,false],
+      ['Impostos',z.imposto-a.imposto,BRL,true],['Resultado',z.lucro-a.lucro,BRL,false]];
+    vk.innerHTML=cmp.map(function(it){
+      const nome=it[0], d=it[1], fmt=it[2], inverso=it[3];
+      const bom=inverso?d<0:d>0;
+      return '<div class="kpi"><div class="rot">'+nome+'</div><div class="val '+(Math.abs(d)<0.0001?'':(bom?'bom':'ruim'))+'">'+(d>=0?'+':'−')+fmt(Math.abs(d))+'</div><div class="pe">'+rotuloComp(a.competencia)+' → '+rotuloComp(z.competencia)+'</div></div>';
+    }).join('');
+  }
+}
+
 /* ---------- render ---------- */
 function render(){
   const b=base(), h=hoje(), res=resultado(h.consumo);
@@ -483,6 +642,14 @@ function render(){
   ];
   document.getElementById('kpis').innerHTML=kpis.map(([r,v,p,c])=>
     `<div class="kpi"><div class="rot">${r}</div><div class="val ${c||''}">${v}</div><div class="pe">${p}</div></div>`).join('');
+
+  /* ponto de equilibrio */
+  const q=pontoEquilibrio();
+  const elPe=document.getElementById('pe');
+  if(elPe) elPe.innerHTML=
+    '<div class="kpi"><div class="rot">Custos fixos do mês</div><div class="val">'+BRL(q.fixos)+'</div><div class="pe">folha, aluguel e despesas</div></div>'+
+    '<div class="kpi"><div class="rot">Faturamento de equilíbrio</div><div class="val">'+BRL(q.pe)+'</div><div class="pe">margem de contribuição de '+PCT(q.margContrib)+'</div></div>'+
+    '<div class="kpi"><div class="rot">Folga sobre o equilíbrio</div><div class="val '+(q.folga<0?'ruim':'bom')+'">'+BRL(q.folga)+'</div><div class="pe">'+(q.folga<0?'faturamento abaixo do mínimo':'quanto a casa vende acima do mínimo')+'</div></div>';
 
   /* cascata */
   const partes=[['CMV',b.cmv],['Folha + encargos',b.folhaTotal],['Aluguel e despesas',S.despGerais+S.aluguel],['Impostos sobre consumo',h.consumo],['IRPJ + CSLL',h.renda],['Sobra',res.lucro]];
@@ -663,9 +830,30 @@ function planos(b){
     `<div class="chk"><input type="checkbox" id="pq${i}"><div><div class="t" style="font-weight:450">${q}</div></div></div>`).join('');
 }
 
+const bI=document.getElementById('btnImprimir'); if(bI) bI.onclick=()=>window.print();
+const bL=document.getElementById('btnLimpar'); if(bL) bL.onclick=()=>{
+  S=Object.assign({},DEF);
+  CAMPOS.forEach(k=>{ const el=document.getElementById(k); if(el) el.value=S[k]; });
+  render(); status('valores de exemplo restaurados — salve para gravar no banco');
+};
+const bX=document.getElementById('btnCsv'); if(bX) bX.onclick=async()=>{
+  try{
+    if(!HIST.length) await renderHistorico();
+    if(!HIST.length){ status('não há histórico para exportar'); return; }
+    const cab=['competencia','receita','cmv','cmv_pct','folha','folha_pct','impostos','carga_total_pct','resultado','margem_pct'];
+    const linhas=HIST.map(x=>[x.competencia,x.receita.toFixed(2),x.cmv.toFixed(2),x.cmvPct.toFixed(2),x.folha.toFixed(2),x.folhaPct.toFixed(2),x.imposto.toFixed(2),x.cargaTotal.toFixed(2),x.lucro.toFixed(2),x.margem.toFixed(2)].join(';'));
+    const csv='\ufeff'+cab.join(';')+'\n'+linhas.join('\n');
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+    a.download='painel-financeiro-abs.csv'; a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  }catch(e){ status('não consegui exportar ('+e.message+')','var(--vermelho)'); }
+};
+
 render();
 carregarComp(COMP,true);
 renderAgente();
+renderHistorico();
 </script>
 </body>
 </html>
