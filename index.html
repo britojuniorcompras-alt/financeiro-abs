@@ -196,7 +196,7 @@ body.travado{overflow:hidden}
    <div><label>ICMS efetivo hoje (% da receita)</label><input type="number" id="icmsEf" step="0.01"></div>
    <div><label>IRPJ + CSLL hoje (% da receita)</label><input type="number" id="irpjCsll" step="0.01"></div>
    <div><label>Compensar a CBS-teste de 2026?</label><select id="comp26"><option value="1">Sim (regra padrão)</option><option value="0">Não</option></select></div>
-   <div><label>Adicional de 10% do IRPJ</label><select id="adicIRPJ"><option value="1">Incluir (lucro presumido &gt; R$ 20 mil/mês)</option><option value="0">Não incluir</option></select></div>
+   <div><label>Adicional de 10% do IRPJ</label><select id="adicIRPJ"><option value="0">Não incluir (como na apuração atual)</option><option value="1">Incluir (lucro presumido &gt; R$ 20 mil/mês)</option></select></div>
    <div><label>Presunção de IRPJ sobre a receita (%)</label><input type="number" id="presuncao" step="0.1"></div>
   </div>
   <div class="aviso">
@@ -405,7 +405,7 @@ const DEF={
   compCesta:95000, compAlim:185000, compBeb:62000, despGerais:118000,
   aluguel:62000, aluguelPJ:1, folha:330000, encargos:35, compSimples:140000,
   estoque:185000,
-  cbsRef:8.80, ibsRef:17.70, reducao:40, pisCofins:3.65, icmsEf:4.00, irpjCsll:2.28, comp26:1, adicIRPJ:1, presuncao:8,
+  cbsRef:8.80, ibsRef:17.70, reducao:40, pisCofins:3.65, icmsEf:4.00, irpjCsll:2.28, comp26:1, adicIRPJ:0, presuncao:8,
   pPreco:92, pCmv:27, pCesta:35
 };
 const CAMPOS=Object.keys(DEF);
