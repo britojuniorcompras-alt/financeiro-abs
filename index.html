@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel Financeiro</title>
+<style>
+:root{
+  --azul:#14395c; --azul2:#1d4e7a; --azulclaro:#e8f0f7;
+  --vinho:#7d2233; --ouro:#b8893a; --verde:#1f6b4a; --vermelho:#a32a2a;
+  --bg:#f5f2ec; --card:#ffffff; --txt:#1a1f26; --txt2:#5b6672; --linha:#e2dcd2;
+  --sombra:0 1px 2px rgba(20,57,92,.06),0 6px 18px rgba(20,57,92,.07);
+}
+:root:not([data-theme="light"]){}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12161b; --card:#1a2028; --txt:#eef1f4; --txt2:#9aa6b2; --linha:#2b333d;
+    --azulclaro:#1e2b38; --azul:#5fa3dc; --azul2:#7cb8e8; --ouro:#d9a94f; --verde:#4cc08c; --vermelho:#e06b6b; --vinho:#d4788a;
+    --sombra:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12161b; --card:#1a2028; --txt:#eef1f4; --txt2:#9aa6b2; --linha:#2b333d;
+  --azulclaro:#1e2b38; --azul:#5fa3dc; --azul2:#7cb8e8; --ouro:#d9a94f; --verde:#4cc08c; --vermelho:#e06b6b; --vinho:#d4788a;
+  --sombra:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px 80px}
+header{background:linear-gradient(135deg,var(--azul) 0%,#0e2740 100%);color:#fff;padding:26px 0 0}
+header .wrap{padding-bottom:0}
+.hd{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.marca{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#b8d4ec;margin:0 0 4px}
+h1{margin:0;font-size:26px;font-weight:600;letter-spacing:-.01em}
+.sub{margin:6px 0 0;color:#b8d4ec;font-size:13.5px;max-width:620px}
+.tema{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer}
+nav{display:flex;gap:2px;margin-top:20px;overflow-x:auto;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{background:transparent;border:0;border-bottom:3px solid transparent;color:#b8d4ec;padding:11px 15px;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap;font-family:inherit}
+nav button.on{color:#fff;border-bottom-color:var(--ouro)}
+section{display:none;padding-top:26px}
+section.on{display:block}
+.card{background:var(--card);border:1px solid var(--linha);border-radius:14px;padding:20px;box-shadow:var(--sombra);margin-bottom:16px}
+.card h2{margin:0 0 4px;font-size:17px;font-weight:600}
+.card h3{margin:22px 0 8px;font-size:14px;font-weight:600;color:var(--azul)}
+.card h3:first-child{margin-top:0}
+.desc{margin:0 0 16px;color:var(--txt2);font-size:13.5px}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(168px,1fr))}
+label{display:block;font-size:12.5px;color:var(--txt2);margin-bottom:5px;font-weight:500}
+input,select{width:100%;padding:9px 11px;border:1px solid var(--linha);border-radius:9px;background:var(--bg);color:var(--txt);font-size:14.5px;font-family:inherit}
+input:focus,select:focus{outline:2px solid var(--azul2);outline-offset:-1px}
+.kpi{background:var(--card);border:1px solid var(--linha);border-radius:12px;padding:15px;box-shadow:var(--sombra)}
+.kpi .rot{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--txt2);margin-bottom:6px}
+.kpi .val{font-size:23px;font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.kpi .pe{font-size:12px;color:var(--txt2);margin-top:3px}
+.bom{color:var(--verde)} .ruim{color:var(--vermelho)} .at{color:var(--ouro)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--linha);font-variant-numeric:tabular-nums}
+th:first-child,td:first-child{text-align:left;font-variant-numeric:normal}
+thead th{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--txt2);font-weight:600}
+tbody tr.dest{background:var(--azulclaro)}
+tbody tr.dest td{font-weight:600}
+.tw{overflow-x:auto;margin:0 -4px}
+.aviso{background:var(--azulclaro);border-left:3px solid var(--azul2);border-radius:0 10px 10px 0;padding:12px 15px;font-size:13px;color:var(--txt);margin:14px 0}
+.aviso b{color:var(--azul)}
+.sug{border:1px solid var(--linha);border-left-width:4px;border-radius:0 12px 12px 0;padding:14px 16px;margin-bottom:11px;background:var(--card)}
+.sug.alta{border-left-color:var(--vermelho)}
+.sug.media{border-left-color:var(--ouro)}
+.sug.info{border-left-color:var(--verde)}
+.sug .tag{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.sug.alta .tag{color:var(--vermelho)} .sug.media .tag{color:var(--ouro)} .sug.info .tag{color:var(--verde)}
+.sug h4{margin:5px 0 6px;font-size:15px;font-weight:600}
+.sug p{margin:0;font-size:13.5px;color:var(--txt2)}
+.sug .num{font-weight:650;color:var(--txt)}
+.lin{display:flex;align-items:center;gap:10px;margin-bottom:7px;font-size:13.5px}
+.barra{flex:1;height:22px;background:var(--azulclaro);border-radius:5px;overflow:hidden;position:relative}
+.barra i{display:block;height:100%;background:var(--azul2);border-radius:5px}
+.barra i.leg{background:var(--vinho)}
+.lab{width:52px;font-size:12.5px;color:var(--txt2);font-variant-numeric:tabular-nums}
+.vlr{width:112px;text-align:right;font-size:13px;font-variant-numeric:tabular-nums;font-weight:600}
+.rod{text-align:center;color:var(--txt2);font-size:12px;padding:30px 16px 0;max-width:720px;margin:0 auto}
+.chk{display:flex;gap:11px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--linha)}
+.chk:last-child{border-bottom:0}
+.chk input{width:18px;height:18px;margin-top:2px;flex:0 0 auto}
+.chk .q{font-size:11px;font-weight:700;color:var(--ouro);letter-spacing:.05em}
+.chk .t{font-size:14px;font-weight:550}
+.chk .d{font-size:13px;color:var(--txt2)}
+.cols{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;background:var(--azulclaro);border-radius:9px;padding:13px 15px;overflow-x:auto;white-space:pre;color:var(--txt);line-height:1.7}
+.btn{background:var(--azul);color:#fff;border:0;border-radius:9px;padding:10px 16px;font-size:14px;font-weight:550;cursor:pointer;font-family:inherit}
+.btn.sec{background:transparent;color:var(--azul);border:1px solid var(--linha)}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--azulclaro);color:var(--azul);margin-left:7px;vertical-align:middle}
+@media(max-width:600px){h1{font-size:21px}.wrap{padding:0 14px 60px}.kpi .val{font-size:20px}.vlr{width:92px;font-size:12px}}
+</style>
+</head>
+<body>
+<header>
+ <div class="wrap">
+  <div class="hd">
+   <div>
+    <p class="marca">a bela Sintra &nbsp;·&nbsp; Controladoria</p>
+    <h1>Painel Financeiro & Reforma Tributária</h1>
+    <p class="sub">Leitura do resultado do mês e simulação da transição do IVA dual (CBS + IBS) de 2026 a 2033, com o regime específico de bares e restaurantes.</p>
+   </div>
+   <button class="tema" onclick="tema()">Tema</button>
+  </div>
+  <nav id="nav"></nav>
+ </div>
+</header>
+
+<div class="wrap">
+
+<!-- ============ DADOS ============ -->
+<section id="s-dados">
+ <div class="card">
+  <h2>Dados do mês</h2>
+  <p class="desc">Valores mensais, em reais. Tudo que está abaixo alimenta as outras abas em tempo real. Os números que já vêm preenchidos são <b>exemplo ilustrativo</b> — substitua pelos reais antes de apresentar.</p>
+
+  <h3>Receita</h3>
+  <div class="grid g4">
+   <div><label>Salão (alimentação)</label><input type="number" id="recSalao"></div>
+   <div><label>Delivery (alimentação)</label><input type="number" id="recDelivery"></div>
+   <div><label>Bebidas alcoólicas</label><input type="number" id="recBebAlc"></div>
+   <div><label>Outras receitas</label><input type="number" id="recOutras"></div>
+   <div><label>Gorjeta / serviço embutido</label><input type="number" id="gorjeta"></div>
+   <div><label>Comissão da plataforma (% do delivery)</label><input type="number" id="taxaPlat" step="0.1"></div>
+  </div>
+
+  <h3>Custos e despesas</h3>
+  <div class="grid g4">
+   <div><label>Compras — cesta básica (alíq. zero)</label><input type="number" id="compCesta"></div>
+   <div><label>Compras — demais alimentos</label><input type="number" id="compAlim"></div>
+   <div><label>Compras — bebidas alcoólicas</label><input type="number" id="compBeb"></div>
+   <div><label>Despesas operacionais (energia, gás, serviços)</label><input type="number" id="despGerais"></div>
+   <div><label>Aluguel</label><input type="number" id="aluguel"></div>
+   <div><label>Locador é pessoa jurídica?</label><select id="aluguelPJ"><option value="1">Sim — gera crédito</option><option value="0">Não (PF) — sem crédito</option></select></div>
+   <div><label>Folha + pró-labore</label><input type="number" id="folha"></div>
+   <div><label>Encargos sobre a folha (%)</label><input type="number" id="encargos" step="0.1"></div>
+   <div><label>Compras de fornecedores do Simples/MEI (R$)</label><input type="number" id="compSimples"></div>
+   <div><label>Estoque em 31/12/2026 (estimado)</label><input type="number" id="estoque"></div>
+  </div>
+
+  <h3>Parâmetros fiscais</h3>
+  <div class="grid g4">
+   <div><label>CBS de referência (%)</label><input type="number" id="cbsRef" step="0.01"></div>
+   <div><label>IBS de referência (%)</label><input type="number" id="ibsRef" step="0.01"></div>
+   <div><label>Redução do regime específico (%)</label><input type="number" id="reducao" step="1"></div>
+   <div><label>PIS/Cofins hoje (%)</label><input type="number" id="pisCofins" step="0.01"></div>
+   <div><label>ICMS efetivo hoje (% da receita)</label><input type="number" id="icmsEf" step="0.01"></div>
+   <div><label>IRPJ + CSLL hoje (% da receita)</label><input type="number" id="irpjCsll" step="0.01"></div>
+   <div><label>Compensar a CBS-teste de 2026?</label><select id="comp26"><option value="1">Sim (regra padrão)</option><option value="0">Não</option></select></div>
+  </div>
+  <div class="aviso">
+   <b>Por que a alíquota é um campo editável.</b> A alíquota de referência do IBS e da CBS ainda será fixada por resolução do Senado — os valores sugeridos aqui (8,80% + 17,70% = 26,50%) são a estimativa que circula nos estudos oficiais. Quando o número sair, basta trocar os dois campos e todo o painel se recalcula.
+  </div>
+ </div>
+
+ <div class="card">
+  <h2>A planilha que eu preciso do financeiro</h2>
+  <p class="desc">Para o painel sair do exemplo e virar o retrato real da casa, o ideal é um arquivo só, uma aba por bloco, com uma linha por mês dos últimos 12 a 24 meses. Sem fórmulas travadas e sem células mescladas.</p>
+
+  <h3>Aba 1 — Receita (uma linha por mês)</h3>
+  <div class="cols">mes | receita_salao | receita_delivery | receita_bebida_alcoolica | outras_receitas | gorjeta | comissao_plataforma | num_couverts</div>
+
+  <h3>Aba 2 — Compras e CMV</h3>
+  <div class="cols">mes | fornecedor | cnpj | regime_do_fornecedor | categoria | valor | icms_destacado | pis_cofins_destacado</div>
+  <p class="desc" style="margin-top:8px">A coluna <b>regime_do_fornecedor</b> (Simples, MEI, Presumido, Real) é a mais importante da planilha inteira: a partir de 2027 ela decide de quais notas a casa vai conseguir tomar crédito.</p>
+
+  <h3>Aba 3 — Despesas e folha</h3>
+  <div class="cols">mes | conta_contabil | descricao | valor | fornecedor_pj_ou_pf | centro_de_custo</div>
+
+  <h3>Aba 4 — Apuração de impostos (12 meses)</h3>
+  <div class="cols">mes | faturamento_bruto | pis | cofins | icms | iss | irpj | csll | inss_patronal | fgts</div>
+
+  <h3>Aba 5 — Estoque</h3>
+  <div class="cols">data_posicao | categoria | valor_total | origem_nacional_ou_importado</div>
+  <p class="desc" style="margin-top:8px">Esta é a aba que ninguém lembra de pedir e que vale dinheiro: o estoque existente em 1º/01/2027 dá direito a crédito presumido de CBS, e a posição precisa estar fotografada antes da virada.</p>
+
+  <div class="aviso">Se o sistema da casa exporta em CSV, pode mandar cinco arquivos separados em vez de cinco abas — o que importa é que cada linha seja um mês (ou uma nota), e que os nomes das colunas venham na primeira linha.</div>
+ </div>
+</section>
+
+<!-- ============ VISÃO GERAL ============ -->
+<section id="s-visao">
+ <div class="card">
+  <h2>Resultado do mês</h2>
+  <p class="desc">Carga tributária calculada na regra de hoje: PIS/Cofins cumulativo, ICMS efetivo e IRPJ/CSLL sobre o presumido.</p>
+  <div class="grid g4" id="kpis"></div>
+ </div>
+ <div class="card">
+  <h2>Para onde vai cada real que entra</h2>
+  <div id="cascata"></div>
+ </div>
+ <div class="card">
+  <h2>DRE gerencial</h2>
+  <div class="tw"><table id="dre"></table></div>
+ </div>
+</section>
+
+<!-- ============ REFORMA ============ -->
+<section id="s-reforma">
+ <div class="card">
+  <h2>A transição ano a ano <span class="pill">2026 → 2033</span></h2>
+  <p class="desc">Mesmo faturamento e mesmo mix de hoje, projetados sobre as regras de cada ano da transição. Serve para enxergar a curva, não para prever o faturamento futuro.</p>
+  <div class="tw"><table id="tabReforma"></table></div>
+  <div id="graf" style="margin-top:22px"></div>
+ </div>
+ <div class="card">
+  <h2>Como cada ano é calculado</h2>
+  <div class="tw"><table id="tabRegras"></table></div>
+  <div class="aviso">
+   <b>O que o regime específico dá e o que ele tira.</b> Bares e restaurantes têm as alíquotas do IBS e da CBS reduzidas em 40% sobre a alimentação e as bebidas não alcoólicas preparadas na casa (arts. 273 a 276 da LC 214/2025). Em compensação, o cliente pessoa jurídica fica proibido de tomar crédito dessa despesa — o que pesa em evento corporativo e em conta de empresa, não no cliente do salão. Bebida alcoólica fica de fora da redução e segue na alíquota cheia.
+  </div>
+ </div>
+</section>
+
+<!-- ============ PREÇO ============ -->
+<section id="s-preco">
+ <div class="card">
+  <h2>Preço e margem</h2>
+  <p class="desc">Quanto o preço precisaria se mexer, em cada ano, para a casa terminar o mês com a mesma margem de hoje — sem cortar custo nenhum.</p>
+  <div class="tw"><table id="tabPreco"></table></div>
+  <div class="aviso">Repasse de preço é a última alavanca, não a primeira. Antes dele vêm o crédito de entrada bem aproveitado, a troca de fornecedor sem crédito e a limpeza da base de cálculo (gorjeta e comissão de plataforma).</div>
+ </div>
+ <div class="card">
+  <h2>Prato a prato</h2>
+  <p class="desc">Simulação de um item do cardápio na regra de hoje e na regra plena de 2033.</p>
+  <div class="grid g3">
+   <div><label>Preço de venda (R$)</label><input type="number" id="pPreco" step="0.01"></div>
+   <div><label>CMV do prato (R$)</label><input type="number" id="pCmv" step="0.01"></div>
+   <div><label>% do CMV que é cesta básica</label><input type="number" id="pCesta" step="1"></div>
+  </div>
+  <div class="tw" style="margin-top:16px"><table id="tabPrato"></table></div>
+ </div>
+</section>
+
+<!-- ============ SUGESTÕES ============ -->
+<section id="s-sug">
+ <div class="card">
+  <h2>Leitura e recomendações</h2>
+  <p class="desc">Geradas a partir dos números preenchidos na aba Dados. Mudou o dado, muda a recomendação.</p>
+  <div id="sugestoes"></div>
+ </div>
+</section>
+
+<!-- ============ PLANO ============ -->
+<section id="s-plano">
+ <div class="card">
+  <h2>Plano de transição</h2>
+  <p class="desc">O que precisa estar pronto, e quando. A coluna da esquerda é o prazo real, não a data em que seria confortável começar.</p>
+  <div id="checklist"></div>
+ </div>
+ <div class="card">
+  <h2>Perguntas para levar ao contador</h2>
+  <div id="perguntas"></div>
+ </div>
+</section>
+
+<p class="rod">
+ Simulação gerencial para apoio à decisão. A alíquota de referência do IBS e da CBS ainda não foi fixada por resolução do Senado, e o enquadramento de cada operação da casa no regime específico deve ser validado com a contabilidade antes de qualquer decisão de preço.
+</p>
+</div>
+
+<script>
+const ABAS=[["dados","Dados"],["visao","Visão geral"],["reforma","Reforma 2026-2033"],["preco","Preço & margem"],["sug","Sugestões"],["plano","Plano"]];
+const nav=document.getElementById('nav');
+ABAS.forEach(([id,nome],i)=>{
+  const b=document.createElement('button');
+  b.textContent=nome; b.className=i===1?'on':''; b.onclick=()=>abrir(id,b);
+  nav.appendChild(b);
+});
+function abrir(id,b){
+  document.querySelectorAll('section').forEach(s=>s.classList.remove('on'));
+  document.getElementById('s-'+id).classList.add('on');
+  document.querySelectorAll('#nav button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.getElementById('s-visao').classList.add('on');
+
+function tema(){
+  const r=document.documentElement;
+  const atual=r.getAttribute('data-theme');
+  const escuro=atual?atual==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;
+  r.setAttribute('data-theme',escuro?'light':'dark');
+  setTimeout(render,30);
+}
+
+/* ---------- estado ---------- */
+const DEF={
+  recSalao:820000, recDelivery:180000, recBebAlc:140000, recOutras:20000,
+  gorjeta:78000, taxaPlat:27,
+  compCesta:95000, compAlim:185000, compBeb:62000, despGerais:118000,
+  aluguel:62000, aluguelPJ:1, folha:330000, encargos:35, compSimples:140000,
+  estoque:185000,
+  cbsRef:8.80, ibsRef:17.70, reducao:40, pisCofins:3.65, icmsEf:3.20, irpjCsll:2.28, comp26:1,
+  pPreco:92, pCmv:27, pCesta:35
+};
+const CAMPOS=Object.keys(DEF);
+let S={...DEF};
+try{ const g=localStorage.getItem('abs-fin'); if(g){ S={...DEF,...JSON.parse(g)}; } }catch(e){}
+CAMPOS.forEach(k=>{
+  const el=document.getElementById(k); if(!el) return;
+  el.value=S[k];
+  el.addEventListener('input',()=>{
+    const v=parseFloat(el.value); S[k]=isNaN(v)?0:v;
+    try{ localStorage.setItem('abs-fin',JSON.stringify(S)); }catch(e){}
+    render();
+  });
+});
+
+/* ---------- utilitários ---------- */
+const BRL=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+const BRL2=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:2,maximumFractionDigits:2});
+const PCT=n=>(n).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';
+
+/* ---------- motor fiscal ---------- */
+function base(){
+  const receita=S.recSalao+S.recDelivery+S.recBebAlc+S.recOutras;
+  const fornecimento=S.recSalao+S.recDelivery;
+  const gorjetaExcl=Math.min(S.gorjeta, fornecimento*0.15);
+  const comissao=S.recDelivery*(S.taxaPlat/100);
+  const baseEsp=Math.max(0, fornecimento-gorjetaExcl-comissao);
+  const baseGer=S.recBebAlc+S.recOutras;
+  const cmv=S.compCesta+S.compAlim+S.compBeb;
+  const folhaTotal=S.folha*(1+S.encargos/100);
+  const credAliqCheia=S.compBeb+S.despGerais+(S.aluguelPJ?S.aluguel:0);
+  return {receita,fornecimento,gorjetaExcl,comissao,baseEsp,baseGer,cmv,folhaTotal,credAliqCheia};
+}
+
+/* fatores de cada ano da transição */
+function regras(ano){
+  const cbs=S.cbsRef/100, ibs=S.ibsRef/100;
+  if(ano===2026) return {cbs:S.comp26?0:0.009, ibs:0.001, legado:1, nota:'Ano-teste: CBS 0,9% e IBS 0,1%'+(S.comp26?', compensados':'')+'. PIS/Cofins e ICMS integrais.'};
+  if(ano===2027||ano===2028) return {cbs:Math.max(0,cbs-0.001), ibs:0.001, legado_pis:0, legado:1, semPisCofins:true, nota:'CBS cheia menos 0,1 p.p. PIS/Cofins extintos. IBS ainda simbólico (0,05% + 0,05%). ICMS integral.'};
+  const esc={2029:0.10,2030:0.20,2031:0.30,2032:0.40};
+  if(esc[ano]!==undefined) return {cbs, ibs:ibs*esc[ano], legado:1-esc[ano], semPisCofins:true, nota:'IBS a '+(esc[ano]*100)+'% da referência; ICMS reduzido a '+((1-esc[ano])*100)+'%.'};
+  return {cbs, ibs, legado:0, semPisCofins:true, nota:'Regime pleno: IBS + CBS integrais. ICMS e ISS extintos.'};
+}
+
+function calcAno(ano){
+  const b=base(), r=regras(ano);
+  const aliqCheia=r.cbs+r.ibs;
+  const aliqRed=aliqCheia*(1-S.reducao/100);
+  const debito=b.baseEsp*aliqRed + b.baseGer*aliqCheia;
+  const credito=S.compCesta*0 + S.compAlim*aliqCheia*0.4 + b.credAliqCheia*aliqCheia;
+  const novo=Math.max(0,debito-credito);
+  const legado=b.receita*((r.semPisCofins?0:S.pisCofins/100)+ (S.icmsEf/100)*r.legado);
+  const consumo=novo+legado;
+  const renda=b.receita*(S.irpjCsll/100);
+  return {ano,aliqCheia,aliqRed,debito,credito,novo,legado,consumo,total:consumo+renda,
+          efetiva:b.receita?consumo/b.receita*100:0, nota:r.nota, saldoCredor:Math.max(0,credito-debito)};
+}
+const ANOS=[2026,2027,2028,2029,2030,2031,2032,2033];
+
+function hoje(){
+  const b=base();
+  const consumo=b.receita*((S.pisCofins/100)+(S.icmsEf/100));
+  const renda=b.receita*(S.irpjCsll/100);
+  return {consumo,renda,total:consumo+renda,efetiva:b.receita?consumo/b.receita*100:0};
+}
+function resultado(cargaConsumo){
+  const b=base();
+  const h=hoje();
+  const desp=S.despGerais+S.aluguel;
+  const lucro=b.receita-b.cmv-b.folhaTotal-desp-cargaConsumo-h.renda;
+  return {receita:b.receita,cmv:b.cmv,folha:b.folhaTotal,desp,imposto:cargaConsumo,renda:h.renda,lucro,
+          margem:b.receita?lucro/b.receita*100:0};
+}
+
+/* ---------- render ---------- */
+function render(){
+  const b=base(), h=hoje(), res=resultado(h.consumo);
+
+  /* KPIs */
+  const cmvPct=b.receita?b.cmv/b.receita*100:0;
+  const folhaPct=b.receita?b.folhaTotal/b.receita*100:0;
+  const c33=calcAno(2033), c27=calcAno(2027);
+  const delta=c33.consumo-h.consumo;
+  const kpis=[
+    ['Receita do mês',BRL(b.receita),'salão, delivery, bebidas e outras',''],
+    ['CMV',PCT(cmvPct),BRL(b.cmv),cmvPct>35?'ruim':cmvPct>30?'at':'bom'],
+    ['Folha + encargos',PCT(folhaPct),BRL(b.folhaTotal),folhaPct>35?'ruim':folhaPct>30?'at':'bom'],
+    ['Margem líquida',PCT(res.margem),BRL(res.lucro),res.margem<5?'ruim':res.margem<10?'at':'bom'],
+    ['Carga sobre consumo hoje',PCT(h.efetiva),BRL(h.consumo)+' por mês',''],
+    ['Carga em 2033',PCT(c33.efetiva),BRL(c33.consumo)+' por mês',''],
+    ['Variação mensal',(delta>=0?'+':'−')+BRL(Math.abs(delta)),delta>=0?'a mais em imposto, em 2033':'a menos em imposto, em 2033',delta>0?'ruim':'bom'],
+    ['Crédito de entrada em 2033',BRL(c33.credito),'hoje a casa não aproveita nada disso','bom']
+  ];
+  document.getElementById('kpis').innerHTML=kpis.map(([r,v,p,c])=>
+    `<div class="kpi"><div class="rot">${r}</div><div class="val ${c||''}">${v}</div><div class="pe">${p}</div></div>`).join('');
+
+  /* cascata */
+  const partes=[['CMV',b.cmv],['Folha + encargos',b.folhaTotal],['Aluguel e despesas',S.despGerais+S.aluguel],['Impostos sobre consumo',h.consumo],['IRPJ + CSLL',h.renda],['Sobra',res.lucro]];
+  const max=b.receita||1;
+  document.getElementById('cascata').innerHTML=partes.map(([n,v])=>{
+    const p=v/max*100;
+    return `<div class="lin"><div style="width:168px;font-size:13px">${n}</div>
+      <div class="barra"><i style="width:${Math.max(0,Math.min(100,p))}%"></i></div>
+      <div class="lab">${PCT(p)}</div><div class="vlr">${BRL(v)}</div></div>`;
+  }).join('');
+
+  /* DRE */
+  document.getElementById('dre').innerHTML=`
+   <thead><tr><th>Linha</th><th>Valor</th><th>% da receita</th></tr></thead>
+   <tbody>
+    <tr class="dest"><td>Receita bruta</td><td>${BRL(b.receita)}</td><td>100,0%</td></tr>
+    <tr><td>(−) Impostos sobre consumo</td><td>${BRL(h.consumo)}</td><td>${PCT(h.consumo/max*100)}</td></tr>
+    <tr class="dest"><td>Receita líquida</td><td>${BRL(b.receita-h.consumo)}</td><td>${PCT((b.receita-h.consumo)/max*100)}</td></tr>
+    <tr><td>(−) CMV</td><td>${BRL(b.cmv)}</td><td>${PCT(b.cmv/max*100)}</td></tr>
+    <tr class="dest"><td>Lucro bruto</td><td>${BRL(b.receita-h.consumo-b.cmv)}</td><td>${PCT((b.receita-h.consumo-b.cmv)/max*100)}</td></tr>
+    <tr><td>(−) Folha e encargos</td><td>${BRL(b.folhaTotal)}</td><td>${PCT(b.folhaTotal/max*100)}</td></tr>
+    <tr><td>(−) Aluguel e despesas</td><td>${BRL(S.despGerais+S.aluguel)}</td><td>${PCT((S.despGerais+S.aluguel)/max*100)}</td></tr>
+    <tr><td>(−) IRPJ e CSLL</td><td>${BRL(h.renda)}</td><td>${PCT(h.renda/max*100)}</td></tr>
+    <tr class="dest"><td>Resultado do mês</td><td>${BRL(res.lucro)}</td><td>${PCT(res.margem)}</td></tr>
+   </tbody>`;
+
+  /* tabela reforma */
+  const linhas=ANOS.map(a=>calcAno(a));
+  document.getElementById('tabReforma').innerHTML=`
+   <thead><tr><th>Ano</th><th>Débito IBS+CBS</th><th>Crédito</th><th>Novo sistema</th><th>ICMS / PIS / Cofins</th><th>Total sobre consumo</th><th>Carga efetiva</th><th>vs. hoje</th></tr></thead>
+   <tbody>
+    <tr class="dest"><td>Hoje (2026)</td><td>—</td><td>—</td><td>—</td><td>${BRL(h.consumo)}</td><td>${BRL(h.consumo)}</td><td>${PCT(h.efetiva)}</td><td>—</td></tr>
+    ${linhas.map(l=>{
+      const d=l.consumo-h.consumo;
+      return `<tr><td>${l.ano}</td><td>${BRL(l.debito)}</td><td>${BRL(l.credito)}</td><td>${BRL(l.novo)}</td><td>${BRL(l.legado)}</td><td>${BRL(l.consumo)}</td><td>${PCT(l.efetiva)}</td>
+      <td class="${d>0?'ruim':'bom'}">${d>=0?'+':'−'}${BRL(Math.abs(d))}</td></tr>`;
+    }).join('')}
+   </tbody>`;
+
+  /* gráfico */
+  const maxC=Math.max(h.consumo,...linhas.map(l=>l.consumo))||1;
+  document.getElementById('graf').innerHTML=
+   `<div class="lin"><div style="width:52px;font-size:13px;font-weight:600">Hoje</div>
+     <div class="barra"><i class="leg" style="width:${h.consumo/maxC*100}%"></i></div><div class="vlr">${BRL(h.consumo)}</div></div>`
+   + linhas.map(l=>{
+    const pNovo=l.novo/maxC*100, pLeg=l.legado/maxC*100;
+    return `<div class="lin"><div style="width:52px;font-size:13px">${l.ano}</div>
+      <div class="barra" style="display:flex"><i style="width:${pNovo}%"></i><i class="leg" style="width:${pLeg}%;border-radius:0 5px 5px 0"></i></div>
+      <div class="vlr">${BRL(l.consumo)}</div></div>`;
+   }).join('')
+   + `<p class="desc" style="margin-top:10px"><span style="color:var(--azul2)">■</span> IBS + CBS &nbsp;&nbsp; <span style="color:var(--vinho)">■</span> ICMS, PIS e Cofins</p>`;
+
+  /* regras */
+  document.getElementById('tabRegras').innerHTML=`
+   <thead><tr><th>Ano</th><th>Alíquota cheia</th><th>Alíquota do regime específico</th><th>O que vale nesse ano</th></tr></thead>
+   <tbody>${linhas.map(l=>`<tr><td>${l.ano}</td><td>${PCT(l.aliqCheia*100)}</td><td>${PCT(l.aliqRed*100)}</td><td style="text-align:left;font-size:12.5px;color:var(--txt2)">${l.nota}</td></tr>`).join('')}</tbody>`;
+
+  /* preço */
+  document.getElementById('tabPreco').innerHTML=`
+   <thead><tr><th>Ano</th><th>Imposto sobre consumo</th><th>Diferença mensal</th><th>Diferença no ano</th><th>Repasse necessário no preço</th></tr></thead>
+   <tbody>${linhas.map(l=>{
+     const d=l.consumo-h.consumo;
+     const rep=b.receita?d/b.receita*100:0;
+     return `<tr><td>${l.ano}</td><td>${BRL(l.consumo)}</td><td class="${d>0?'ruim':'bom'}">${d>=0?'+':'−'}${BRL(Math.abs(d))}</td><td>${d>=0?'+':'−'}${BRL(Math.abs(d)*12)}</td><td><b>${rep>=0?'+':''}${PCT(rep)}</b></td></tr>`;
+   }).join('')}</tbody>`;
+
+  /* prato */
+  const cestaP=S.pCmv*(S.pCesta/100), outroP=S.pCmv-cestaP;
+  const aliq33=(S.cbsRef+S.ibsRef)/100;
+  const impHoje=S.pPreco*((S.pisCofins/100)+(S.icmsEf/100));
+  const deb33=S.pPreco*aliq33*(1-S.reducao/100);
+  const cre33=outroP*aliq33*0.4;
+  const imp33=deb33-cre33;
+  document.getElementById('tabPrato').innerHTML=`
+   <thead><tr><th></th><th>Hoje</th><th>2033 (regime pleno)</th></tr></thead>
+   <tbody>
+    <tr><td>Preço de venda</td><td>${BRL2(S.pPreco)}</td><td>${BRL2(S.pPreco)}</td></tr>
+    <tr><td>CMV</td><td>${BRL2(S.pCmv)}</td><td>${BRL2(S.pCmv)}</td></tr>
+    <tr><td>Débito de imposto</td><td>${BRL2(impHoje)}</td><td>${BRL2(deb33)}</td></tr>
+    <tr><td>Crédito de entrada</td><td>${BRL2(0)}</td><td>−${BRL2(cre33)}</td></tr>
+    <tr class="dest"><td>Imposto líquido</td><td>${BRL2(impHoje)}</td><td>${BRL2(imp33)}</td></tr>
+    <tr class="dest"><td>Margem de contribuição</td><td>${BRL2(S.pPreco-S.pCmv-impHoje)}</td><td>${BRL2(S.pPreco-S.pCmv-imp33)}</td></tr>
+   </tbody>`;
+
+  sugerir(b,h,res,linhas);
+  planos(b);
+}
+
+/* ---------- motor de sugestões ---------- */
+function sugerir(b,h,res,linhas){
+  const S33=linhas[linhas.length-1], S27=linhas[1];
+  const out=[];
+  const add=(n,t,d)=>out.push(`<div class="sug ${n}"><div class="tag">${n==='alta'?'Prioridade alta':n==='media'?'Atenção':'Oportunidade'}</div><h4>${t}</h4><p>${d}</p></div>`);
+  const cmvPct=b.receita?b.cmv/b.receita*100:0;
+  const folhaPct=b.receita?b.folhaTotal/b.receita*100:0;
+  const delta=S33.consumo-h.consumo;
+
+  if(delta>0) add('alta','A conta de 2033 fica maior do que a de hoje',
+    `Mantido este mix, o imposto sobre consumo sai de <span class="num">${BRL(h.consumo)}</span> para <span class="num">${BRL(S33.consumo)}</span> por mês — <span class="num">${BRL(delta*12)}</span> por ano. A curva começa a subir em 2029, quando o IBS entra de verdade; até lá há três anos para trabalhar o crédito de entrada e o mix.`);
+  else add('info','A reforma, neste cenário, joga a favor da casa',
+    `O imposto sobre consumo cai de <span class="num">${BRL(h.consumo)}</span> para <span class="num">${BRL(S33.consumo)}</span> por mês, uma economia de <span class="num">${BRL(Math.abs(delta)*12)}</span> ao ano. O ganho vem do crédito de entrada, que hoje a casa simplesmente não tem no regime cumulativo.`);
+
+  add('alta','O crédito de entrada é a virada de chave',
+    `Em 2033 as notas de compra e de despesa geram <span class="num">${BRL(S33.credito)}</span> de crédito por mês. Hoje, no cumulativo, esse valor é zero. Para que ele exista de verdade, três coisas precisam estar certas: fornecedor que destaque IBS e CBS, nota em nome do CNPJ e classificação correta de cada item.`);
+
+  if(S.compSimples>0){
+    const perda=S.compSimples*((S.cbsRef+S.ibsRef)/100);
+    add('alta','Fornecedor do Simples passa a custar mais caro do que parece',
+      `São <span class="num">${BRL(S.compSimples)}</span> por mês comprados de Simples e MEI. Fora de algumas hipóteses, esses fornecedores não transferem crédito cheio — o que equivale a até <span class="num">${BRL(perda)}</span> por mês de crédito que a casa deixa na mesa. Vale pedir cotação paralela com fornecedor do regime regular e comparar o preço líquido de imposto, não o preço de tabela.`);
+  }
+
+  const gorjetaExcl=b.gorjetaExcl;
+  if(gorjetaExcl>0) add('info','Gorjeta fora da base de cálculo',
+    `A gorjeta de até 15% do valor do fornecimento fica fora da base do IBS e da CBS (art. 274 da LC 214/2025). No seu caso isso tira <span class="num">${BRL(gorjetaExcl)}</span> da base todo mês. Só funciona se a gorjeta estiver destacada no documento fiscal — se vier embutida no preço, o benefício evapora.`);
+  if(S.gorjeta>b.fornecimento*0.15) add('media','Parte da gorjeta passa do teto de 15%',
+    `O valor informado excede o limite de 15% do fornecimento. O excedente, <span class="num">${BRL(S.gorjeta-gorjetaExcl)}</span>, entra na base normalmente. Vale conferir com a contabilidade como a gorjeta está sendo destacada hoje.`);
+
+  if(b.comissao>0) add('info','A comissão da plataforma sai da base',
+    `A LC 214/2025 exclui da base os valores que a plataforma não repassa ao restaurante. São <span class="num">${BRL(b.comissao)}</span> por mês sobre os quais a casa hoje paga imposto e, a partir da nova regra, não paga. É um ponto que costuma passar batido porque depende de a nota do delivery estar emitida corretamente.`);
+
+  if(cmvPct>33) add('media','CMV acima da faixa saudável',
+    `O CMV está em <span class="num">${PCT(cmvPct)}</span> da receita. Para a faixa de ${PCT(30)} o resultado do mês ganharia <span class="num">${BRL(b.cmv-b.receita*0.30)}</span>. Com o crédito de entrada valendo dinheiro a partir de 2027, a negociação com fornecedor passa a ter duas alavancas: preço e regime tributário.`);
+
+  if(folhaPct>32) add('media','Folha pesando na margem',
+    `Folha e encargos somam <span class="num">${PCT(folhaPct)}</span> da receita. A reforma do consumo não mexe nisso — folha não gera crédito de IBS e CBS. É uma frente separada, e continua sendo a segunda maior linha da casa.`);
+
+  if(S.estoque>0){
+    const cred=S.estoque*0.0925;
+    add('alta','Crédito presumido sobre o estoque na virada de 2027',
+      `A LC 214/2025 permite apropriar crédito presumido de CBS sobre o estoque existente em 1º/01/2027 — 9,25% para bens nacionais, desde que não tenha havido aproveitamento anterior de PIS e Cofins. Sobre <span class="num">${BRL(S.estoque)}</span> de estoque, isso é cerca de <span class="num">${BRL(cred)}</span> de uma vez. Exige inventário fotografado na data e documentação das notas.`);
+  }
+
+  add('media','Cliente pessoa jurídica não vai poder creditar a refeição',
+    `O art. 276 veda ao adquirente pessoa jurídica o crédito sobre alimentação consumida no restaurante. Para o cliente corporativo, uma alíquota reduzida sem crédito sai mais cara do que a alíquota cheia com crédito — o que muda a conversa comercial de evento e de conta de empresa. Vale mapear quanto da receita vem de CNPJ antes de 2027.`);
+
+  if(S.recBebAlc>0){
+    const p=b.receita?S.recBebAlc/b.receita*100:0;
+    add('media','Bebida alcoólica fica fora da redução de 40%',
+      `São <span class="num">${PCT(p)}</span> da receita na alíquota cheia, sem o benefício do regime específico. Some a isso o Imposto Seletivo, que a partir de 2027 incide na indústria e no importador e chega à casa embutido no preço de compra do vinho. A carta de vinhos merece uma revisão de precificação própria, separada do cardápio.`);
+  }
+
+  if(S.aluguelPJ==0 && S.aluguel>0) add('media','Aluguel de pessoa física não gera crédito',
+    `O aluguel de <span class="num">${BRL(S.aluguel)}</span> por mês não vai gerar crédito de IBS e CBS por ser pago a pessoa física. É um dado a considerar em qualquer renegociação ou renovação de contrato daqui para frente.`);
+
+  if(S27.saldoCredor>0) add('info','Possível acúmulo de saldo credor',
+    `Em algum ano da transição o crédito de entrada supera o débito, gerando saldo credor de <span class="num">${BRL(S27.saldoCredor)}</span>. Saldo credor não é lucro: é dinheiro parado até ser compensado ou ressarcido, e precisa entrar no fluxo de caixa como tal.`);
+
+  add('info','Split payment muda o caixa, não só o imposto',
+    `No novo sistema o tributo tende a ser separado no momento do pagamento. O efeito prático é no capital de giro: o dinheiro do imposto deixa de circular na conta da casa entre a venda e o recolhimento. Vale simular o fluxo de caixa com e sem esse colchão antes de 2027.`);
+
+  document.getElementById('sugestoes').innerHTML=out.join('');
+}
+
+function planos(b){
+  const itens=[
+    ['Até dez/2026','Inventário de estoque fotografado em 31/12','Posição por item e por nota, separando nacional de importado — é o que sustenta o crédito presumido de CBS na virada.'],
+    ['Até dez/2026','Cadastro de fornecedores com o regime tributário de cada um','A coluna que decide, item a item, de onde virá crédito a partir de 2027. É o trabalho mais chato e o de maior retorno.'],
+    ['Até dez/2026','Cardápio classificado por tratamento tributário','Alimentação preparada, bebida não alcoólica, bebida alcoólica e produto revendido pronto têm regras diferentes. A separação precisa estar no sistema, não na cabeça de alguém.'],
+    ['Jan/2027','PIS e Cofins extintos, CBS em alíquota cheia','Conferir nos primeiros fechamentos se o sistema está destacando CBS corretamente e se os créditos estão sendo capturados.'],
+    ['Jan/2027','Saldo de créditos de PIS e Cofins levantado','Créditos acumulados não evaporam, mas têm regra própria de aproveitamento. Precisa estar apurado antes da virada.'],
+    ['2027-2028','Revisão da política de preço com o novo custo tributário','Dois anos de CBS cheia com ICMS ainda integral: é a janela para testar repasse e ajuste de mix antes de o IBS entrar.'],
+    ['2029-2032','Acompanhar a escada do IBS','ICMS caindo 10 pontos por ano e IBS subindo na mesma proporção. Cada janeiro muda a conta — o painel precisa ser revisado todo ano.'],
+    ['2033','Regime pleno','ICMS e ISS extintos. O que não tiver sido ajustado até aqui vira margem perdida.']
+  ];
+  document.getElementById('checklist').innerHTML=itens.map((it,i)=>
+    `<div class="chk"><input type="checkbox" id="ck${i}"><div><div class="q">${it[0]}</div><div class="t">${it[1]}</div><div class="d">${it[2]}</div></div></div>`).join('');
+
+  const qs=[
+    'Qual regime tributário fica mais vantajoso para a casa a partir de 2027 — Simples Nacional ou regime regular? A conta muda porque no regular passa a existir crédito de entrada.',
+    'O regime especial de ICMS que a casa usa hoje em São Paulo continua valendo durante toda a transição, até 2032?',
+    'Como a gorjeta está destacada hoje no documento fiscal, e o que precisa mudar para garantir a exclusão dos 15%?',
+    'O delivery está sendo documentado de forma que a comissão da plataforma fique fora da base?',
+    'Quanto da receita da casa vem de cliente pessoa jurídica, que deixará de tomar crédito?',
+    'Qual o saldo de créditos de PIS e Cofins acumulado, e qual o plano de aproveitamento antes de 31/12/2026?',
+    'O inventário de 31/12/2026 já está programado com a separação de nacional e importado?'
+  ];
+  document.getElementById('perguntas').innerHTML=qs.map((q,i)=>
+    `<div class="chk"><input type="checkbox" id="pq${i}"><div><div class="t" style="font-weight:450">${q}</div></div></div>`).join('');
+}
+
+render();
+</script>
+</body>
+</html>
