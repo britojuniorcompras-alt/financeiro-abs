@@ -196,6 +196,8 @@ body.travado{overflow:hidden}
    <div><label>ICMS efetivo hoje (% da receita)</label><input type="number" id="icmsEf" step="0.01"></div>
    <div><label>IRPJ + CSLL hoje (% da receita)</label><input type="number" id="irpjCsll" step="0.01"></div>
    <div><label>Compensar a CBS-teste de 2026?</label><select id="comp26"><option value="1">Sim (regra padrão)</option><option value="0">Não</option></select></div>
+   <div><label>Adicional de 10% do IRPJ</label><select id="adicIRPJ"><option value="1">Incluir (lucro presumido &gt; R$ 20 mil/mês)</option><option value="0">Não incluir</option></select></div>
+   <div><label>Presunção de IRPJ sobre a receita (%)</label><input type="number" id="presuncao" step="0.1"></div>
   </div>
   <div class="aviso">
    <b>Por que a alíquota é um campo editável.</b> A alíquota de referência do IBS e da CBS ainda será fixada por resolução do Senado — os valores sugeridos aqui (8,80% + 17,70% = 26,50%) são a estimativa que circula nos estudos oficiais. Quando o número sair, basta trocar os dois campos e todo o painel se recalcula.
@@ -276,7 +278,7 @@ body.travado{overflow:hidden}
   <h2>Como cada ano é calculado</h2>
   <div class="tw"><table id="tabRegras"></table></div>
   <div class="aviso">
-   <b>O que o regime específico dá e o que ele tira.</b> Bares e restaurantes têm as alíquotas do IBS e da CBS reduzidas em 40% sobre a alimentação e as bebidas não alcoólicas preparadas na casa (arts. 273 a 276 da LC 214/2025). Em compensação, o cliente pessoa jurídica fica proibido de tomar crédito dessa despesa — o que pesa em evento corporativo e em conta de empresa, não no cliente do salão. Bebida alcoólica fica de fora da redução e segue na alíquota cheia.
+   <b>Premissa do modelo.</b> A escada do IBS entre 2029 e 2032 — 10%, 20%, 30% e 40% da alíquota de referência, com o ICMS caindo na mesma proporção — é a leitura do ADCT adotada aqui. A regulamentação ainda pode fixar proporções diferentes, e nesse caso os anos de 2029 em diante mudam.<br><br><b>O que o regime específico dá e o que ele tira.</b> Bares e restaurantes têm as alíquotas do IBS e da CBS reduzidas em 40% sobre a alimentação e as bebidas não alcoólicas preparadas na casa (arts. 273 a 276 da LC 214/2025). Em compensação, o cliente pessoa jurídica fica proibido de tomar crédito dessa despesa — o que pesa em evento corporativo e em conta de empresa, não no cliente do salão. Bebida alcoólica fica de fora da redução e segue na alíquota cheia.
   </div>
  </div>
 </section>
@@ -338,12 +340,12 @@ body.travado{overflow:hidden}
 const SBU='https://kfgcqshhltemsochafid.supabase.co';
 const SBK='sb_publishable_-t8ynneFzBs_Xw3oEWenzA_APQqzOa-';
 const SBH={apikey:SBK,Authorization:'Bearer '+SBK,'Content-Type':'application/json'};
-let USUARIO=null;
+let USUARIO=null, CODIGO=null;
 const pMsg=document.getElementById('portaoMsg');
 const pInp=document.getElementById('codigo');
 
 function abrirPainel(u){
-  USUARIO=u;
+  USUARIO=u; CODIGO=u&&u.codigo?u.codigo:CODIGO;
   document.getElementById('portao').style.display='none';
   document.body.classList.remove('travado');
   const m=document.querySelector('.marca');
@@ -354,13 +356,14 @@ async function entrar(){
   if(!c){ pMsg.textContent='Digite o código.'; pMsg.style.color='var(--vermelho)'; return; }
   pMsg.textContent='Verificando…'; pMsg.style.color='var(--txt2)';
   try{
-    const r=await fetch(SBU+'/rest/v1/fin_acesso?codigo=eq.'+encodeURIComponent(c)+'&ativo=eq.true&select=codigo,nome,papel',{headers:SBH});
+    const r=await fetch(SBU+'/rest/v1/rpc/fin2_login',{method:'POST',headers:SBH,body:JSON.stringify({p_codigo:c})});
     if(!r.ok) throw new Error('HTTP '+r.status);
     const j=await r.json();
     if(!j.length){ pMsg.textContent='Código não encontrado.'; pMsg.style.color='var(--vermelho)'; return; }
-    try{ sessionStorage.setItem('abs-fin-user',JSON.stringify(j[0])); }catch(e){}
-    fetch(SBU+'/rest/v1/fin_acesso?codigo=eq.'+encodeURIComponent(c),{method:'PATCH',headers:SBH,body:JSON.stringify({ultimo_acesso:new Date().toISOString()})}).catch(()=>{});
-    abrirPainel(j[0]);
+    const u=Object.assign({codigo:c},j[0]);
+    try{ sessionStorage.setItem('abs-fin-user',JSON.stringify(u)); }catch(e){}
+    abrirPainel(u);
+    if(typeof recarregarTudo==='function') recarregarTudo();
   }catch(e){
     pMsg.textContent='Não consegui verificar agora ('+e.message+').';
     pMsg.style.color='var(--vermelho)';
@@ -402,7 +405,7 @@ const DEF={
   compCesta:95000, compAlim:185000, compBeb:62000, despGerais:118000,
   aluguel:62000, aluguelPJ:1, folha:330000, encargos:35, compSimples:140000,
   estoque:185000,
-  cbsRef:8.80, ibsRef:17.70, reducao:40, pisCofins:3.65, icmsEf:4.00, irpjCsll:2.28, comp26:1,
+  cbsRef:8.80, ibsRef:17.70, reducao:40, pisCofins:3.65, icmsEf:4.00, irpjCsll:2.28, comp26:1, adicIRPJ:1, presuncao:8,
   pPreco:92, pCmv:27, pCesta:35
 };
 const CAMPOS=Object.keys(DEF);
@@ -414,8 +417,9 @@ CAMPOS.forEach(k=>{
   el.addEventListener('input',()=>{
     const v=parseFloat(el.value); S[k]=isNaN(v)?0:v;
     try{ localStorage.setItem('abs-fin-v2',JSON.stringify(S)); }catch(e){}
-    render(); agendarSalvar();
+    render();
   });
+  el.addEventListener('change',()=>{ agendarSalvar(); });
 });
 
 /* ---------- banco de dados (Supabase) ---------- */
@@ -429,23 +433,17 @@ try{ const c=localStorage.getItem('abs-fin-comp'); if(c) COMP=c; }catch(e){}
 if(elComp) elComp.value=COMP;
 function status(t,cor){ if(elStatus){ elStatus.textContent=t; elStatus.style.color=cor||'var(--txt2)'; } }
 
-async function sbCarregar(comp){
-  const r=await fetch(SB_URL+'/rest/v1/fin_mes?competencia=eq.'+encodeURIComponent(comp)+'&select=dados',{headers:SB_H});
+async function rpc(nome,corpo){
+  if(!CODIGO) throw new Error('sem código de acesso');
+  const r=await fetch(SB_URL+'/rest/v1/rpc/'+nome,{method:'POST',headers:SB_H,
+    body:JSON.stringify(Object.assign({p_codigo:CODIGO},corpo||{}))});
   if(!r.ok) throw new Error('HTTP '+r.status);
-  const j=await r.json();
-  return j.length?j[0].dados:null;
+  const t=await r.text();
+  return t?JSON.parse(t):null;
 }
-async function sbSalvar(comp,dados){
-  const r=await fetch(SB_URL+'/rest/v1/fin_mes?on_conflict=competencia',{method:'POST',
-    headers:Object.assign({},SB_H,{Prefer:'resolution=merge-duplicates'}),
-    body:JSON.stringify({competencia:comp,dados:dados,atualizado_em:new Date().toISOString()})});
-  if(!r.ok) throw new Error('HTTP '+r.status);
-}
-async function sbSugestoes(){
-  const r=await fetch(SB_URL+'/rest/v1/fin_sugestoes?select=*&order=criado_em.desc&limit=12',{headers:SB_H});
-  if(!r.ok) throw new Error('HTTP '+r.status);
-  return await r.json();
-}
+async function sbCarregar(comp){ return await rpc('fin2_get_mes',{p_competencia:comp}); }
+async function sbSalvar(comp,dados){ await rpc('fin2_salvar_mes',{p_competencia:comp,p_dados:dados}); }
+async function sbSugestoes(){ return (await rpc('fin2_sugestoes'))||[]; }
 
 let tmr=null;
 function agendarSalvar(){
@@ -532,17 +530,23 @@ function calcAno(ano){
   const novo=Math.max(0,debito-credito);
   const legado=b.receita*((r.semPisCofins?0:S.pisCofins/100)+ (S.icmsEf/100)*r.legado);
   const consumo=novo+legado;
-  const renda=b.receita*(S.irpjCsll/100);
+  const renda=b.receita*(S.irpjCsll/100)+adicionalIRPJ(b.receita);
   return {ano,aliqCheia,aliqRed,debito,credito,novo,legado,consumo,total:consumo+renda,
           efetiva:b.receita?consumo/b.receita*100:0, nota:r.nota, saldoCredor:Math.max(0,credito-debito)};
 }
 const ANOS=[2026,2027,2028,2029,2030,2031,2032,2033];
 
+function adicionalIRPJ(receita){
+  if(!S.adicIRPJ) return 0;
+  return Math.max(0,receita*(S.presuncao/100)-20000)*0.10;
+}
 function hoje(){
   const b=base();
   const consumo=b.receita*((S.pisCofins/100)+(S.icmsEf/100));
-  const renda=b.receita*(S.irpjCsll/100);
-  return {consumo,renda,total:consumo+renda,efetiva:b.receita?consumo/b.receita*100:0};
+  const renda=b.receita*(S.irpjCsll/100)+adicionalIRPJ(b.receita);
+  return {consumo,renda,total:consumo+renda,
+    efetiva:b.receita?consumo/b.receita*100:0,
+    rendaPct:b.receita?renda/b.receita*100:0};
 }
 function resultado(cargaConsumo){
   const b=base();
@@ -559,24 +563,21 @@ function metricas(st){
   const b=base(), h=hoje(), r=resultado(h.consumo), c33=calcAno(2033);
   const out={receita:b.receita, cmv:b.cmv, cmvPct:b.receita?b.cmv/b.receita*100:0,
     folha:b.folhaTotal, folhaPct:b.receita?b.folhaTotal/b.receita*100:0,
-    imposto:h.consumo, cargaTotal:h.efetiva+S.irpjCsll,
-    lucro:r.lucro, margem:r.margem, carga2033:c33.efetiva+S.irpjCsll};
+    imposto:h.consumo, cargaTotal:h.efetiva+h.rendaPct,
+    lucro:r.lucro, margem:r.margem, carga2033:c33.efetiva+h.rendaPct};
   S=guarda; return out;
 }
 function pontoEquilibrio(){
   const b=base();
   const fixos=b.folhaTotal+S.despGerais+S.aluguel;
-  const margContrib=1-(b.receita?b.cmv/b.receita:0)-((S.pisCofins+S.icmsEf)/100);
+  const rendaPct=(S.irpjCsll/100)+(S.adicIRPJ?(S.presuncao/100)*0.10:0);
+  const margContrib=1-(b.receita?b.cmv/b.receita:0)-((S.pisCofins+S.icmsEf)/100)-rendaPct;
   const pe=margContrib>0?fixos/margContrib:0;
   return {fixos,margContrib:margContrib*100,pe,folga:b.receita-pe};
 }
 
 let HIST=[];
-async function sbHistorico(){
-  const r=await fetch(SB_URL+'/rest/v1/fin_mes?select=competencia,dados&order=competencia.asc',{headers:SB_H});
-  if(!r.ok) throw new Error('HTTP '+r.status);
-  return await r.json();
-}
+async function sbHistorico(){ return (await rpc('fin2_historico'))||[]; }
 function rotuloComp(c){
   const m=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
   const p=String(c).split('-');
@@ -637,8 +638,8 @@ function render(){
     ['Carga em 2033',PCT(c33.efetiva),BRL(c33.consumo)+' por mês',''],
     ['Variação mensal',(delta>=0?'+':'−')+BRL(Math.abs(delta)),delta>=0?'a mais em imposto, em 2033':'a menos em imposto, em 2033',delta>0?'ruim':'bom'],
     ['Crédito de entrada em 2033',BRL(c33.credito),'hoje a casa não aproveita nada disso','bom'],
-    ['Carga total hoje',PCT(h.efetiva+S.irpjCsll),'consumo + IRPJ e CSLL',''],
-    ['Carga total em 2033',PCT(c33.efetiva+S.irpjCsll),'consumo + IRPJ e CSLL','']
+    ['Carga total hoje',PCT(h.efetiva+h.rendaPct),'consumo + IRPJ e CSLL',''],
+    ['Carga total em 2033',PCT(c33.efetiva+h.rendaPct),'consumo + IRPJ e CSLL','']
   ];
   document.getElementById('kpis').innerHTML=kpis.map(([r,v,p,c])=>
     `<div class="kpi"><div class="rot">${r}</div><div class="val ${c||''}">${v}</div><div class="pe">${p}</div></div>`).join('');
@@ -850,10 +851,10 @@ const bX=document.getElementById('btnCsv'); if(bX) bX.onclick=async()=>{
   }catch(e){ status('não consegui exportar ('+e.message+')','var(--vermelho)'); }
 };
 
+function recarregarTudo(){ carregarComp(COMP,true); renderAgente(); renderHistorico(); }
+
 render();
-carregarComp(COMP,true);
-renderAgente();
-renderHistorico();
+if(CODIGO) recarregarTudo();
 </script>
 </body>
 </html>
